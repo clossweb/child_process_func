@@ -1,6 +1,6 @@
 {
   "name": "child_process_func",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Create the child process is the same as function call ",
   "main": "index.js",
   "scripts": {
