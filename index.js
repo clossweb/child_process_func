@@ -23,13 +23,15 @@ module.exports = function spawn (...options) {
 
     this.node = function (func) {
         const funcStr = func.toString();
-        const replaceFuncStr = funcStr.replace(/(?:resolve\((.+)\))/g,
-            'process.stdout.write(JSON.stringify({mode: \'async\', result: $1}))');
 
         this.child.stdin.write(`
             process.stdout.write(JSON.stringify({
-                mode: 'sync', 
-                result: (${replaceFuncStr})()
+                status: 'sync', 
+                result: (()=>{
+                    const resolve = (asyncFunc) => 
+                        {process.stdout.write(JSON.stringify({status: 'async', result: asyncFunc}));}
+                    return (${funcStr})();
+                })()
             }));
         `);
         this.child.stdin.end();
@@ -38,45 +40,45 @@ module.exports = function spawn (...options) {
     }
 
     this.back = function (callback) {
-        let isJsonStringBefore = false;
-        let isJsonStringAfter = false;
+        const jsonStringBeforePattern = /\{/g;
+        const jsonStringAfterPattern = /\}/g;
+        let jsonStringBeforeCount = 0;
+        let jsonStringAfterCount = 0;
         let dataStrRet = '';
 
         this.child.stdout.on('data', function (data) {
             const dataStr = data.toString()
             dataStrRet += dataStr;
 
-            if (dataStr.includes('{')) {
-                isJsonStringBefore = true;
-            }
-            if (dataStr.includes('}')) {
-                isJsonStringAfter = true;
-            }
+            jsonStringBeforeCount += (dataStr.match(jsonStringBeforePattern) || []).length;
+            jsonStringAfterCount += (dataStr.match(jsonStringAfterPattern) || []).length;
 
             // 組成階段當符合完整 Object 時傳回
-            if (isJsonStringBefore && isJsonStringAfter) {
-                const pattern = /\{(?:\"\w+\"\:[^\{\}]+(\,|\B))+\}/g;
+            if (jsonStringBeforeCount && jsonStringAfterCount &&
+                jsonStringBeforeCount === jsonStringAfterCount) {
 
                 dataStrRet
-                    .match(pattern)
+                    .replace(/\}(?=\{)/g, '}&') // 不支援反找 .split(/(?<=\})(?=\{)/) 的替代做法
+                    .split(/&/)
                     .map((curJsonDataStr) => {
                         if (curJsonDataStr) {
                             const JSONdata = JSON.parse(curJsonDataStr);
-                            callback(JSONdata.mode, JSONdata.result);
+                            callback(JSONdata.status, JSONdata.result);
+                        } else {
+                            callback('error', curJsonDataStr);
                         }
                     });
 
-                dataStrRet = dataStrRet.replace(pattern, '');
-
-                isJsonStringBefore = dataStrRet.includes('{');
-                isJsonStringAfter = dataStrRet.includes('}');
+                dataStrRet = '';
+                jsonStringBeforeCount = 0;
+                jsonStringAfterCount = 0;
             }
         });
 
         // this.child.stdout.on('close', function () {
         //     // console.log('close');
         //     // const JSONdata = JSON.parse(dataStrRet);
-        //     // callback(JSONdata.mode, JSONdata.result);
+        //     // callback(JSONdata.status, JSONdata.result);
         // });
 
         return this;
