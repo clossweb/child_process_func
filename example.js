@@ -5,34 +5,41 @@ const longArr = new Array(999999).fill({i: -1}).map((v, index) => {
     return v;
 });
 
+
+// console.log((()=>{
+//     for (let i = 0; i < 9999999999; i++) {
+//
+//     }
+//
+//     return 'for loop 1 ok'
+// })());
+//
+// console.log((()=>{
+//     for (let i = 0; i < 9999999999; i++) {
+//
+//     }
+//
+//     return 'for loop 2 ok'
+// })());
+
 const child_1 = () => new child()
     .pass({
         longArr
     })
     .node(() => {
-        setTimeout(() => {
-            resolve(longArr);
+
+        setTimeout(()=>{
+            resolve('async setTimeout 1 ok');
         }, 1000);
 
-        setTimeout(() => {
-            resolve(new Array(99999).fill({
-                i: -1,
-                test: {data: -1}
-            }).map((v, index) => {
-                v.i = index;
-                v.test.data = index;
-                return v;
-            }));
-        }, 5000);
+        for (let i = 0; i < 9999999999; i++) {
 
-        return 'child process - 1'
+        }
+
+        return 'for loop 1 ok'
     })
     .back((status, data) => {
-        if (status === 'async') {
-            console.log(status, data.length);
-        } else {
-            console.log(status, data);
-        }
+        console.log(data);
     })
     .close(() => {
         console.log('child process - 1 done');
@@ -41,28 +48,17 @@ const child_1 = () => new child()
         console.log(err.toString());
     });
 
-const child_2 = () => new child()
-    .pass({
-        longArr
-    })
-    .node(() => {
-        setInterval(() => {
-            resolve({
-                dateVal: new Date().valueOf()
-            });
-        }, 1000);
 
-        return 'child process - 2'
+const child_2 = () => new child()
+    .node(() => {
+        for (let i = 0; i < 9999999999; i++) {
+
+        }
+
+        return 'for loop 2 ok'
     })
     .back((status, data) => {
-        if (status === 'async') {
-            console.log(new Date(data.dateVal).toString());
-            if (new Date(data.dateVal).getSeconds() === 30) {
-                child_1();
-            }
-        } else {
-            console.log(data);
-        }
+        console.log(data);
     })
     .close(() => {
         console.log('child process - 2 done');
