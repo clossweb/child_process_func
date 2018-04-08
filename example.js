@@ -28,6 +28,8 @@ const child_1 = () => new child()
     })
     .node(() => {
 
+        resolve('pass longArr length:' + longArr.length);
+
         setTimeout(()=>{
             resolve('async setTimeout 1 ok');
         }, 1000);
